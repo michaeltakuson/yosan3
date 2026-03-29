@@ -1,0 +1,1201 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#2e7d32">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <link rel="apple-touch-icon" href="icon.png">
+  <link rel="icon" href="icon.png">
+  <title>予算管理</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Hiragino Sans', 'Segoe UI', sans-serif;
+      background: #f5f5f0;
+      color: #1a1a1a;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* ===== INPUT MODAL ===== */
+    #modal-overlay {
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,0.72);
+      display: flex; align-items: center; justify-content: center;
+      z-index: 1000;
+    }
+    #modal-overlay.hidden { display: none; }
+
+    .modal-box {
+      background: #fff;
+      border-radius: 18px;
+      width: 88%; max-width: 360px;
+      padding: 22px 20px 20px;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.18);
+    }
+    .modal-title {
+      font-size: 17px; font-weight: 700;
+      color: #2e7d32; text-align: center;
+      margin-bottom: 18px;
+    }
+    .field-label {
+      font-size: 12px; color: #888; margin-bottom: 5px; font-weight: 500;
+    }
+    #amount-input {
+      width: 100%; font-size: 30px; font-weight: 700;
+      text-align: right; border: 2px solid #e0e0e0;
+      border-radius: 10px; padding: 10px 14px;
+      outline: none; color: #1a1a1a; margin-bottom: 16px;
+      background: #fafafa;
+    }
+    #amount-input:focus { border-color: #2e7d32; background: #fff; }
+
+    .cat-grid {
+      display: grid; grid-template-columns: 1fr 1fr;
+      gap: 8px; margin-bottom: 18px;
+    }
+    .cat-btn {
+      padding: 11px 8px; border: 2px solid #e8e8e8;
+      border-radius: 10px; background: #fafafa;
+      font-size: 14px; font-weight: 500;
+      cursor: pointer; color: #444;
+      transition: border-color 0.12s, background 0.12s, color 0.12s;
+    }
+    .cat-btn.selected {
+      border-color: #2e7d32; background: #e8f5e9; color: #1b5e20;
+    }
+
+    .row-btns { display: flex; gap: 10px; }
+    .btn-primary {
+      flex: 1; padding: 13px; background: #2e7d32;
+      color: #fff; border: none; border-radius: 10px;
+      font-size: 15px; font-weight: 700; cursor: pointer;
+    }
+    .btn-primary:active { background: #1b5e20; }
+    .btn-secondary {
+      flex: 1; padding: 13px; background: #fff;
+      color: #888; border: 2px solid #e0e0e0;
+      border-radius: 10px; font-size: 15px; font-weight: 600; cursor: pointer;
+    }
+    .btn-secondary:active { background: #f5f5f5; }
+
+    /* ===== SETTINGS MODAL ===== */
+    #settings-modal {
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,0.65);
+      display: flex; align-items: center; justify-content: center;
+      z-index: 1000;
+    }
+    #settings-modal.hidden { display: none; }
+    .settings-box {
+      background: #fff; border-radius: 18px;
+      width: 88%; max-width: 360px;
+      padding: 22px 20px 20px;
+    }
+    .settings-title { font-size: 17px; font-weight: 700; margin-bottom: 18px; }
+    .settings-field { margin-bottom: 14px; }
+    .settings-field label { font-size: 12px; color: #888; display: block; margin-bottom: 5px; font-weight: 500; }
+    .settings-field input {
+      width: 100%; font-size: 20px; font-weight: 600;
+      border: 2px solid #e0e0e0; border-radius: 10px;
+      padding: 10px 14px; outline: none; background: #fafafa;
+    }
+    .settings-field input:focus { border-color: #2e7d32; background: #fff; }
+
+    /* ===== CONFIRM DIALOG ===== */
+    #confirm-dialog {
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,0.5);
+      display: flex; align-items: center; justify-content: center;
+      z-index: 2000;
+    }
+    #confirm-dialog.hidden { display: none; }
+    .confirm-box {
+      background: #fff; border-radius: 16px;
+      padding: 22px 20px; width: 82%; max-width: 300px; text-align: center;
+    }
+    .confirm-box h3 { font-size: 16px; margin-bottom: 6px; }
+    .confirm-box p { font-size: 13px; color: #666; margin-bottom: 18px; }
+    .btn-danger {
+      flex: 1; padding: 12px; background: #c62828;
+      color: #fff; border: none; border-radius: 10px;
+      font-size: 15px; font-weight: 600; cursor: pointer;
+    }
+
+    /* ===== EDIT OVERLAY ===== */
+    #edit-overlay {
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,0.55);
+      display: flex; align-items: center; justify-content: center;
+      z-index: 1500;
+    }
+    #edit-overlay.hidden { display: none; }
+    .edit-box {
+      background: #fff; border-radius: 16px;
+      padding: 20px; width: 85%; max-width: 320px;
+    }
+    .edit-box h3 { font-size: 15px; font-weight: 700; margin-bottom: 14px; }
+    .edit-input, .edit-select {
+      width: 100%; font-size: 18px;
+      border: 2px solid #e0e0e0; border-radius: 10px;
+      padding: 10px 14px; outline: none;
+      margin-bottom: 14px; background: #fafafa;
+    }
+    .edit-input:focus, .edit-select:focus { border-color: #2e7d32; background: #fff; }
+
+    /* ===== MAIN APP ===== */
+    header {
+      position: fixed; top: 0; left: 0; right: 0;
+      background: #2e7d32; color: #fff;
+      padding: 13px 18px;
+      display: flex; align-items: center; justify-content: space-between;
+      z-index: 100; box-shadow: 0 2px 8px rgba(0,0,0,0.18);
+      height: 50px;
+    }
+    header h1 { font-size: 17px; font-weight: 700; }
+    .settings-icon {
+      background: none; border: none; color: #fff;
+      font-size: 20px; cursor: pointer; padding: 4px; line-height: 1;
+    }
+
+    .content {
+      margin-top: 50px; margin-bottom: 56px;
+      overflow-y: auto; min-height: calc(100vh - 106px);
+    }
+
+    .tab-bar {
+      position: fixed; bottom: 0; left: 0; right: 0;
+      background: #fff; border-top: 1px solid #e8e8e8;
+      display: flex; z-index: 100; height: 56px;
+    }
+    .tab-btn {
+      flex: 1; background: none; border: none;
+      font-size: 11px; color: #bbb; cursor: pointer;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center; gap: 2px;
+      font-weight: 500;
+    }
+    .tab-btn.active { color: #2e7d32; }
+    .tab-icon { font-size: 20px; line-height: 1; }
+
+    .tab-panel { display: none; }
+    .tab-panel.active { display: block; }
+
+    /* ===== ANALYSIS TAB ===== */
+
+    /* Block A */
+    .tree-block {
+      background: linear-gradient(170deg, #e8f5e9 0%, #f1f8e9 100%);
+      padding: 24px 20px 18px; text-align: center;
+      transition: background 0.6s;
+    }
+    .tree-block.over {
+      background: linear-gradient(170deg, #efebe9 0%, #fafafa 100%);
+    }
+    #tree-svg-wrap {
+      margin: 0 auto 14px;
+      width: 260px; height: 300px;
+    }
+    .budget-row {
+      display: flex; justify-content: center;
+      align-items: baseline; gap: 6px;
+    }
+    .budget-remaining {
+      font-size: 30px; font-weight: 800; color: #2e7d32;
+      transition: color 0.4s;
+    }
+    .budget-remaining.over { color: #c62828; }
+    .budget-unit { font-size: 13px; color: #888; }
+    .progress-wrap {
+      width: 180px; height: 6px;
+      background: #c8e6c9; border-radius: 3px;
+      margin: 8px auto 4px; overflow: hidden;
+    }
+    .progress-fill {
+      height: 100%; border-radius: 3px;
+      background: #43a047; transition: width 0.5s ease, background 0.4s;
+    }
+    .progress-fill.over { background: #c62828; }
+    #budget-pct { font-size: 12px; color: #999; }
+
+    /* Block B */
+    .card {
+      background: #fff; border-radius: 14px;
+      padding: 16px; margin: 10px 12px 0;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.07);
+    }
+    .card-title {
+      font-size: 13px; font-weight: 700;
+      color: #2e7d32; margin-bottom: 9px;
+    }
+    #pace-text { font-size: 14px; color: #333; line-height: 1.9; }
+    .hi { font-weight: 700; color: #2e7d32; }
+    .hi.over { color: #c62828; }
+
+    /* Block C */
+    .reports-wrap { margin: 10px 12px 12px; }
+    .accordion {
+      background: #fff; border-radius: 14px;
+      margin-bottom: 10px;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.07);
+      overflow: hidden;
+    }
+    .acc-header {
+      padding: 14px 16px; cursor: pointer;
+      display: flex; justify-content: space-between; align-items: center;
+      user-select: none;
+    }
+    .acc-title { font-size: 14px; font-weight: 700; }
+    .acc-arrow {
+      font-size: 11px; color: #bbb;
+      transition: transform 0.2s; display: inline-block;
+    }
+    .acc-arrow.open { transform: rotate(180deg); }
+    .acc-body { display: none; padding: 0 16px 14px; }
+    .acc-body.open { display: block; }
+    .report-text { font-size: 13px; color: #444; line-height: 1.9; margin-bottom: 8px; }
+    .comment {
+      background: #f1f8e9; border-left: 3px solid #66bb6a;
+      padding: 7px 10px; border-radius: 0 6px 6px 0;
+      font-size: 12px; color: #444; margin-bottom: 6px; line-height: 1.6;
+    }
+    canvas.chart {
+      width: 100%; height: 140px; display: block; margin-top: 10px;
+    }
+
+    /* ===== EXPENSE LIST TAB ===== */
+    .expense-list { padding: 10px 12px 16px; }
+    .month-label {
+      font-size: 11px; font-weight: 700; color: #aaa;
+      padding: 8px 2px 6px; letter-spacing: 0.5px;
+    }
+    .expense-item {
+      background: #fff; border-radius: 12px;
+      padding: 11px 12px; margin-bottom: 7px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+      display: flex; align-items: center; gap: 8px;
+    }
+    .ei-datetime { min-width: 52px; }
+    .ei-date {
+      font-size: 13px; color: #555; cursor: pointer;
+      font-weight: 500;
+    }
+    .ei-date:active { color: #2e7d32; }
+    .ei-time {
+      font-size: 11px; color: #bbb; cursor: pointer; margin-top: 1px;
+    }
+    .ei-center { flex: 1; overflow: hidden; }
+    .ei-cat {
+      display: inline-block; font-size: 11px; font-weight: 600;
+      padding: 2px 9px; border-radius: 10px; cursor: pointer;
+    }
+    .ei-memo {
+      font-size: 11px; color: #bbb; margin-top: 3px;
+      cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .ei-right { text-align: right; }
+    .ei-amount {
+      font-size: 16px; font-weight: 700; color: #1a1a1a; cursor: pointer;
+    }
+    .ei-amount:active { color: #2e7d32; }
+    .ei-del {
+      background: none; border: none; font-size: 17px;
+      cursor: pointer; color: #ddd; padding: 4px; line-height: 1;
+      flex-shrink: 0;
+    }
+    .ei-del:active { color: #c62828; }
+
+    /* category badge colors */
+    .c-コンビニ { background: #fff3e0; color: #e65100; }
+    .c-食費     { background: #fce4ec; color: #c62828; }
+    .c-書籍     { background: #e8eaf6; color: #283593; }
+    .c-娯楽費   { background: #f3e5f5; color: #6a1b9a; }
+    .c-交通費   { background: #e0f7fa; color: #00695c; }
+    .c-その他   { background: #f5f5f5; color: #616161; }
+
+    .fab {
+      position: fixed; bottom: 66px; right: 16px;
+      width: 50px; height: 50px; background: #2e7d32;
+      color: #fff; border: none; border-radius: 50%;
+      font-size: 26px; cursor: pointer; z-index: 99;
+      box-shadow: 0 4px 14px rgba(46,125,50,0.38);
+      display: flex; align-items: center; justify-content: center;
+    }
+    .fab:active { background: #1b5e20; transform: scale(0.94); }
+
+    .empty-state {
+      text-align: center; padding: 64px 20px; color: #ccc;
+    }
+    .empty-icon { font-size: 44px; margin-bottom: 10px; }
+    .empty-text { font-size: 14px; }
+
+    /* ===== TOAST ===== */
+    #toast {
+      position: fixed; bottom: 72px; left: 50%;
+      transform: translateX(-50%) translateY(20px);
+      background: rgba(0,0,0,0.78); color: #fff;
+      padding: 9px 18px; border-radius: 20px;
+      font-size: 13px; z-index: 3000;
+      opacity: 0; transition: opacity 0.2s, transform 0.2s;
+      pointer-events: none; white-space: nowrap;
+    }
+    #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+  </style>
+</head>
+<body>
+
+<!-- Input Modal -->
+<div id="modal-overlay">
+  <div class="modal-box">
+    <div class="modal-title">支出を記録</div>
+    <div class="field-label">金額（円）</div>
+    <input type="number" id="amount-input" placeholder="0" inputmode="numeric" min="0">
+    <div class="field-label">カテゴリ</div>
+    <div class="cat-grid">
+      <button class="cat-btn" data-cat="コンビニ">コンビニ</button>
+      <button class="cat-btn" data-cat="食費">食費</button>
+      <button class="cat-btn" data-cat="書籍">書籍</button>
+      <button class="cat-btn" data-cat="娯楽費">娯楽費</button>
+      <button class="cat-btn" data-cat="交通費">交通費</button>
+      <button class="cat-btn" data-cat="その他">その他</button>
+    </div>
+    <div class="row-btns">
+      <button class="btn-primary" id="modal-submit">決定</button>
+      <button class="btn-secondary" id="modal-close">閉じる</button>
+    </div>
+  </div>
+</div>
+
+<!-- Settings Modal -->
+<div id="settings-modal" class="hidden">
+  <div class="settings-box">
+    <div class="settings-title">設定</div>
+    <div class="settings-field">
+      <label>月予算（円）</label>
+      <input type="number" id="set-monthly" inputmode="numeric" min="0">
+    </div>
+    <div class="settings-field">
+      <label>1日あたりの予算（円）</label>
+      <input type="number" id="set-daily" inputmode="numeric" min="0">
+    </div>
+    <div class="row-btns" style="margin-top:4px;">
+      <button class="btn-primary" id="settings-save">保存</button>
+      <button class="btn-secondary" id="settings-close">閉じる</button>
+    </div>
+  </div>
+</div>
+
+<!-- Confirm Dialog -->
+<div id="confirm-dialog" class="hidden">
+  <div class="confirm-box">
+    <h3>削除の確認</h3>
+    <p>この支出を削除しますか？</p>
+    <div class="row-btns">
+      <button class="btn-danger" id="confirm-yes">削除</button>
+      <button class="btn-secondary" id="confirm-no">キャンセル</button>
+    </div>
+  </div>
+</div>
+
+<!-- Edit Overlay -->
+<div id="edit-overlay" class="hidden">
+  <div class="edit-box">
+    <h3 id="edit-title">編集</h3>
+    <div id="edit-body"></div>
+    <div class="row-btns">
+      <button class="btn-primary" id="edit-save">保存</button>
+      <button class="btn-secondary" id="edit-cancel">キャンセル</button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div id="toast"></div>
+
+<!-- App Shell -->
+<header>
+  <h1>予算管理</h1>
+  <button class="settings-icon" id="open-settings" aria-label="設定">&#9881;</button>
+</header>
+
+<div class="content">
+  <!-- Analysis Tab -->
+  <div id="tab-analysis" class="tab-panel active">
+
+    <!-- Block A: Tree -->
+    <div class="tree-block" id="tree-block">
+      <div id="tree-svg-wrap"></div>
+      <div class="budget-row">
+        <div class="budget-remaining" id="budget-rem">¥30,000</div>
+        <div class="budget-unit">残り</div>
+      </div>
+      <div class="progress-wrap">
+        <div class="progress-fill" id="progress-fill" style="width:0%"></div>
+      </div>
+      <div id="budget-pct">0% 使用</div>
+    </div>
+
+    <!-- Block B: Pace -->
+    <div class="card">
+      <div class="card-title">今日のペース</div>
+      <div id="pace-text">読み込み中...</div>
+    </div>
+
+    <!-- Block C: Reports -->
+    <div class="reports-wrap">
+      <!-- Weekly -->
+      <div class="accordion">
+        <div class="acc-header" id="acc-weekly-hdr">
+          <span class="acc-title">週次レポート</span>
+          <span class="acc-arrow" id="arr-weekly">&#9660;</span>
+        </div>
+        <div class="acc-body" id="acc-weekly-body">
+          <div class="report-text" id="weekly-text"></div>
+          <div id="weekly-comments"></div>
+          <canvas class="chart" id="chart-weekly"></canvas>
+        </div>
+      </div>
+      <!-- Monthly -->
+      <div class="accordion">
+        <div class="acc-header" id="acc-monthly-hdr">
+          <span class="acc-title">月次レポート</span>
+          <span class="acc-arrow" id="arr-monthly">&#9660;</span>
+        </div>
+        <div class="acc-body" id="acc-monthly-body">
+          <div class="report-text" id="monthly-text"></div>
+          <div id="monthly-comments"></div>
+          <canvas class="chart" id="chart-monthly"></canvas>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /tab-analysis -->
+
+  <!-- List Tab -->
+  <div id="tab-list" class="tab-panel">
+    <div class="expense-list" id="expense-list"></div>
+  </div>
+</div>
+
+<!-- Tab Bar -->
+<div class="tab-bar">
+  <button class="tab-btn active" id="tab-btn-analysis" onclick="switchTab('analysis')">
+    <span class="tab-icon">&#127807;</span>
+    <span>AI分析</span>
+  </button>
+  <button class="tab-btn" id="tab-btn-list" onclick="switchTab('list')">
+    <span class="tab-icon">&#128203;</span>
+    <span>支出一覧</span>
+  </button>
+</div>
+
+<!-- FAB -->
+<button class="fab" id="fab" onclick="openModal()" aria-label="支出を追加">&#xff0b;</button>
+
+<script>
+'use strict';
+
+// ─── Storage ────────────────────────────────────────────────
+const S_EXP  = 'bgt_expenses';
+const S_CONF = 'bgt_settings';
+
+function loadExp() {
+  try { return JSON.parse(localStorage.getItem(S_EXP) || '[]'); } catch { return []; }
+}
+function saveExp(arr) { localStorage.setItem(S_EXP, JSON.stringify(arr)); }
+function loadConf() {
+  const def = { monthlyBudget: 30000, dailyBudget: 1000 };
+  try { return Object.assign({}, def, JSON.parse(localStorage.getItem(S_CONF) || '{}')); } catch { return def; }
+}
+function saveConf(c) { localStorage.setItem(S_CONF, JSON.stringify(c)); }
+
+function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2); }
+
+// ─── Date helpers ────────────────────────────────────────────
+function fmtDate(d) {
+  return d.getFullYear() + '-' +
+    String(d.getMonth()+1).padStart(2,'0') + '-' +
+    String(d.getDate()).padStart(2,'0');
+}
+function fmtTime(d) {
+  return String(d.getHours()).padStart(2,'0') + ':' + String(d.getMinutes()).padStart(2,'0');
+}
+function todayStr() { return fmtDate(new Date()); }
+function daysInMonth(y, m) { return new Date(y, m+1, 0).getDate(); }
+
+function monthStart() {
+  const n = new Date();
+  return fmtDate(new Date(n.getFullYear(), n.getMonth(), 1));
+}
+function weekStart() {
+  const n = new Date();
+  const diff = n.getDay() === 0 ? -6 : 1 - n.getDay();
+  return fmtDate(new Date(n.getFullYear(), n.getMonth(), n.getDate() + diff));
+}
+function addDays(dateStr, d) {
+  const dt = new Date(dateStr);
+  dt.setDate(dt.getDate() + d);
+  return fmtDate(dt);
+}
+function daysLeft() {
+  const n = new Date();
+  return daysInMonth(n.getFullYear(), n.getMonth()) - n.getDate() + 1;
+}
+
+// ─── Aggregates ──────────────────────────────────────────────
+function sum(arr) { return arr.reduce((s, e) => s + e.amount, 0); }
+function monthlySpent(exps) { const ms = monthStart(); return sum(exps.filter(e => e.date >= ms)); }
+function todaySpent(exps)   { const t = todayStr();    return sum(exps.filter(e => e.date === t)); }
+function rangeSpent(exps, from, to) { return sum(exps.filter(e => e.date >= from && e.date <= to)); }
+function foodConveniRange(exps, from, to) {
+  return sum(exps.filter(e => e.date >= from && e.date <= to && (e.category === '食費' || e.category === 'コンビニ')));
+}
+
+// ─── Tree SVG ────────────────────────────────────────────────
+// Apples: [cx, cy, r] – outer/low first (first to fall) as spent 0→15000
+const APPLES = [
+  [205, 120, 8], [55,  120, 8],
+  [192, 152, 7], [68,  152, 7],
+  [198, 97,  7], [62,  97,  7],
+  [170, 90,  8], [90,  90,  8],
+  [158, 134, 7], [102, 134, 7],
+  [152, 70,  7], [108, 70,  7],
+  [130, 55,  8],
+];
+
+// Leaves: [cx, cy, rx, ry, rot] – outer/low first (first to fall) as spent 15000→30000
+const LEAVES = [
+  [205, 118, 20, 14,  35],
+  [55,  118, 20, 14, -35],
+  [190, 150, 22, 15,  25],
+  [70,  150, 22, 15, -25],
+  [182, 106, 24, 16,  20],
+  [78,  106, 24, 16, -20],
+  [178, 86,  22, 15,  30],
+  [82,  86,  22, 15, -30],
+  [162, 128, 26, 17,  15],
+  [98,  128, 26, 17, -15],
+  [155, 70,  28, 18,  20],
+  [105, 70,  28, 18, -20],
+  [130, 132, 30, 18,   0],
+  [130, 90,  34, 22,   0],
+  [130, 58,  40, 26,   0],
+];
+
+// Branches: low index = trunk side (last to disappear), high index = tip side (first to disappear)
+// Hierarchy: trunk → main → sub → inner sub → tip
+const BRANCHES = [
+  { d: "M 130 192 Q 127 160 130 130",   w: 9   },  // 0: center main   (最後まで残る)
+  { d: "M 130 192 Q 98 172 68 148",     w: 10  },  // 1: left main
+  { d: "M 130 192 Q 162 172 192 148",   w: 10  },  // 2: right main
+  { d: "M 68 148 Q 60 130 52 112",      w: 5   },  // 3: left sub
+  { d: "M 192 148 Q 200 130 208 112",   w: 5   },  // 4: right sub
+  { d: "M 68 148 Q 75 126 86 106",      w: 4.5 },  // 5: left inner sub
+  { d: "M 192 148 Q 185 126 174 106",   w: 4.5 },  // 6: right inner sub
+  { d: "M 52 112 Q 42 95 44 78",        w: 3   },  // 7: far-left tip
+  { d: "M 208 112 Q 218 95 216 78",     w: 3   },  // 8: far-right tip  (最初に消える)
+];
+
+function weatherSvg(adj) {
+  const cloudFill   = adj < -10000 ? '#90A4AE' : '#eceff1';
+  const cloudShadow = adj < -10000 ? '#607D8B' : '#cfd8dc';
+  const cloud = `<ellipse cx="205" cy="33" rx="36" ry="20" fill="${cloudFill}"/>
+    <ellipse cx="182" cy="40" rx="22" ry="16" fill="${cloudFill}"/>
+    <ellipse cx="228" cy="40" rx="24" ry="16" fill="${cloudFill}"/>
+    <ellipse cx="205" cy="49" rx="36" ry="9"  fill="${cloudShadow}" opacity="0.4"/>`;
+
+  if (adj >= 1000) {
+    let rays = '';
+    for (let a = 0; a < 360; a += 45) {
+      const rad = a * Math.PI / 180;
+      const x1 = (205 + Math.cos(rad) * 23).toFixed(1);
+      const y1 = (38  + Math.sin(rad) * 23).toFixed(1);
+      const x2 = (205 + Math.cos(rad) * 31).toFixed(1);
+      const y2 = (38  + Math.sin(rad) * 31).toFixed(1);
+      rays += `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="#FFD600" stroke-width="3" stroke-linecap="round"/>`;
+    }
+    return `<circle cx="205" cy="38" r="30" fill="#FFF9C4" opacity="0.3"/>
+      ${rays}
+      <circle cx="205" cy="38" r="19" fill="#FFD600"/>
+      <circle cx="198" cy="32" r="5"  fill="#fff" opacity="0.25"/>`;
+  }
+
+  const rain = [[183,57],[194,60],[205,57],[216,60],[227,57],[172,60]].map(
+    ([x, y]) => `<line x1="${x}" y1="${y}" x2="${x - 3}" y2="${y + 16}" stroke="#64B5F6" stroke-width="2.5" stroke-linecap="round"/>`
+  ).join('');
+
+  if (adj < -10000) {
+    return `${cloud}${rain}
+      <path d="M 213 56 L 204 70 L 211 70 L 202 86" stroke="#FFD600" stroke-width="3.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M 213 56 L 204 70 L 211 70 L 202 86" stroke="rgba(255,255,255,0.6)" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>`;
+  }
+  if (adj < 0) return `${cloud}${rain}`;
+  return cloud;
+}
+
+function renderTree(spent, adj) {
+  const APPLE_MAX  = 15000;
+  const LEAF_MAX   = 30000;
+  const BRANCH_MAX = 45000;
+  const STUMP_AT   = 60000;
+
+  const isStump = spent >= STUMP_AT;
+
+  const appleRate   = Math.min(Math.max(spent / APPLE_MAX, 0), 1);
+  const visApples   = Math.round(APPLES.length * (1 - appleRate));
+
+  const leafRate    = Math.min(Math.max((spent - APPLE_MAX) / (LEAF_MAX - APPLE_MAX), 0), 1);
+  const visLeaves   = Math.round(LEAVES.length * (1 - leafRate));
+
+  const branchRate  = Math.min(Math.max((spent - LEAF_MAX) / (BRANCH_MAX - LEAF_MAX), 0), 1);
+  const visBranches = Math.round(BRANCHES.length * (1 - branchRate));
+
+  const trunkC     = spent >= BRANCH_MAX ? '#5d4037' : '#795548';
+  const trunkLight = spent >= BRANCH_MAX ? '#6d4c41' : '#8d6e63';
+  const branchC    = spent >= BRANCH_MAX ? '#4e342e' : '#6d4c41';
+  const ground     = spent >= LEAF_MAX   ? '#d7ccc8' : '#a5d6a7';
+
+  const tb = document.getElementById('tree-block');
+  spent >= BRANCH_MAX ? tb.classList.add('over') : tb.classList.remove('over');
+
+  if (isStump) {
+    document.getElementById('tree-svg-wrap').innerHTML =
+      `<svg viewBox="0 0 260 300" xmlns="http://www.w3.org/2000/svg" width="260" height="300">
+        ${weatherSvg(adj)}
+        <ellipse cx="130" cy="278" rx="62" ry="9" fill="#d7ccc8" opacity="0.5"/>
+        <rect x="110" y="248" width="40" height="30" rx="5" fill="#5d4037"/>
+        <ellipse cx="130" cy="248" rx="20" ry="8"   fill="#4e342e"/>
+        <ellipse cx="130" cy="248" rx="13" ry="5"   fill="none" stroke="#8d6e63" stroke-width="1.5" opacity="0.55"/>
+        <ellipse cx="130" cy="248" rx="6"  ry="2.5" fill="none" stroke="#8d6e63" stroke-width="1"   opacity="0.55"/>
+      </svg>`;
+    return;
+  }
+
+  let branchSvg = '';
+  BRANCHES.forEach((b, i) => {
+    if (i < visBranches) {
+      branchSvg += `<path d="${b.d}" stroke="${branchC}" stroke-width="${b.w}" fill="none" stroke-linecap="round"/>`;
+    }
+  });
+
+  const leafCols = ['#388e3c', '#66bb6a', '#2e7d32', '#43a047', '#81c784'];
+  let leafSvg = '';
+  LEAVES.forEach(([cx, cy, rx, ry, rot], i) => {
+    const op = i < visLeaves ? 0.9 : 0;
+    leafSvg += `<ellipse cx="${cx}" cy="${cy}" rx="${rx}" ry="${ry}" `
+      + `transform="rotate(${rot},${cx},${cy})" fill="${leafCols[i % 5]}" `
+      + `opacity="${op}" style="transition:opacity 0.35s ${(i * 0.04).toFixed(2)}s"/>`;
+  });
+
+  let appleSvg = '';
+  APPLES.forEach(([cx, cy, r], i) => {
+    const op = i < visApples ? 1 : 0;
+    const hx = cx - Math.round(r * 0.35);
+    const hy = cy - Math.round(r * 0.35);
+    const hr = Math.round(r * 0.3);
+    appleSvg += `<g opacity="${op}" style="transition:opacity 0.35s ${(i * 0.06).toFixed(2)}s">`
+      + `<circle cx="${cx}" cy="${cy}" r="${r}" fill="#e53935"/>`
+      + `<circle cx="${hx}" cy="${hy}" r="${hr}" fill="#fff" opacity="0.22"/>`
+      + `</g>`;
+  });
+
+  document.getElementById('tree-svg-wrap').innerHTML =
+    `<svg viewBox="0 0 260 300" xmlns="http://www.w3.org/2000/svg" width="260" height="300">
+      ${weatherSvg(adj)}
+      <ellipse cx="130" cy="278" rx="62" ry="9" fill="${ground}" opacity="0.5"/>
+      <path d="M 113 274 C 113 248 115 218 119 190 L 124 190 C 122 218 120 248 119 274 Z" fill="#4e342e" opacity="0.18"/>
+      <path d="M 113 274 C 113 248 115 218 119 190 L 141 190 C 145 218 147 248 147 274 Z" fill="${trunkC}"/>
+      <path d="M 122 270 C 122 244 123 214 124 190" stroke="${trunkLight}" stroke-width="2.5" fill="none" stroke-linecap="round" opacity="0.4"/>
+      ${branchSvg}
+      ${leafSvg}
+      ${appleSvg}
+    </svg>`;
+}
+
+// ─── Main UI update ──────────────────────────────────────────
+function refreshAll() {
+  const exps = loadExp();
+  const conf = loadConf();
+  const spent  = monthlySpent(exps);
+  const remain = conf.monthlyBudget - spent;
+  const rate   = spent / conf.monthlyBudget;
+  const dl     = daysLeft();
+  const adj    = dl > 0 ? Math.round(remain / dl) : 0;
+
+  // Tree + Weather
+  renderTree(spent, adj);
+
+  // Budget header
+  const remEl = document.getElementById('budget-rem');
+  remEl.textContent = (remain >= 0 ? '¥' : '-¥') + Math.abs(remain).toLocaleString();
+  remEl.className = 'budget-remaining' + (remain < 0 ? ' over' : '');
+
+  const pct = Math.min(rate, 1) * 100;
+  const fill = document.getElementById('progress-fill');
+  fill.style.width = pct + '%';
+  remain < 0 ? fill.classList.add('over') : fill.classList.remove('over');
+  document.getElementById('budget-pct').textContent = Math.round(rate * 100) + '% 使用';
+
+  // Pace
+  refreshPace(exps, conf);
+
+  // Reports
+  refreshReports(exps, conf);
+
+  // List (only if visible)
+  if (document.getElementById('tab-list').classList.contains('active')) {
+    renderList(exps);
+  }
+}
+
+function refreshPace(exps, conf) {
+  const todayAmt = todaySpent(exps);
+  const dl = daysLeft();
+  const spent  = monthlySpent(exps);
+  const remain = conf.monthlyBudget - spent;
+  const adj    = dl > 0 ? Math.round(remain / dl) : 0;
+  const diff   = todayAmt - conf.dailyBudget;
+
+  let html;
+  if (todayAmt === 0) {
+    html = `今日はまだ支出がありません。<br>残り${dl}日は <span class="hi">¥${adj.toLocaleString()}/日</span> 使えます。`;
+  } else if (diff > 0) {
+    html = `今日は<strong>¥${todayAmt.toLocaleString()}</strong>使いました。`
+      + `<span class="hi over">¥${diff.toLocaleString()}オーバー</span>。<br>`
+      + `残り${dl}日は <span class="hi">¥${adj.toLocaleString()}/日</span> で生活できます。`;
+  } else {
+    html = `今日は<strong>¥${todayAmt.toLocaleString()}</strong>の使用でした。`
+      + `¥${Math.abs(diff).toLocaleString()}余り。<br>`
+      + `残り${dl}日は <span class="hi">¥${adj.toLocaleString()}/日</span> 使えます。`;
+  }
+  document.getElementById('pace-text').innerHTML = html;
+}
+
+function refreshReports(exps, conf) {
+  const ws  = weekStart();
+  const we  = addDays(ws, 6);
+  const lws = addDays(ws, -7);
+  const lwe = addDays(ws, -1);
+
+  const thisWeek  = rangeSpent(exps, ws, we);
+  const lastWeek  = rangeSpent(exps, lws, lwe);
+  const thisFood  = foodConveniRange(exps, ws, we);
+  const lastFood  = foodConveniRange(exps, lws, lwe);
+
+  // Weekly text
+  let wt = `今週の合計支出: <strong>¥${thisWeek.toLocaleString()}</strong><br>`;
+  if (lastWeek > 0) {
+    const d = thisWeek - lastWeek;
+    wt += d >= 0
+      ? `先週より <strong>¥${d.toLocaleString()}</strong> 多い支出です。<br>`
+      : `先週より <strong>¥${Math.abs(d).toLocaleString()}</strong> 少ない支出です。<br>`;
+  }
+  wt += `食費＋コンビニ: <strong>¥${thisFood.toLocaleString()}</strong>`;
+  document.getElementById('weekly-text').innerHTML = wt;
+
+  // Weekly comments
+  const wc = [];
+  if (lastFood > 0 && (thisFood - lastFood) / lastFood >= 0.2) {
+    wc.push(`今週は食費・コンビニ費が先週より¥${(thisFood - lastFood).toLocaleString()}増えています。`);
+  }
+  if (lastWeek > 0 && thisWeek < lastWeek) {
+    wc.push(`先週より¥${(lastWeek - thisWeek).toLocaleString()}節約できています！`);
+  }
+  document.getElementById('weekly-comments').innerHTML =
+    wc.map(c => `<div class="comment">${c}</div>`).join('');
+
+  // Monthly
+  const n = new Date();
+  const ms = monthStart();
+  const spent   = monthlySpent(exps);
+  const remain  = conf.monthlyBudget - spent;
+  const dim     = daysInMonth(n.getFullYear(), n.getMonth());
+  const dom     = n.getDate();
+  const expected = (dom / dim) * conf.monthlyBudget;
+
+  const lms = fmtDate(new Date(n.getFullYear(), n.getMonth()-1, 1));
+  const lme = fmtDate(new Date(n.getFullYear(), n.getMonth(), 0));
+  const lastMonthSpent = rangeSpent(exps, lms, lme);
+
+  // Category breakdown
+  const catMap = {};
+  exps.filter(e => e.date >= ms).forEach(e => {
+    catMap[e.category] = (catMap[e.category] || 0) + e.amount;
+  });
+  const topCat = Object.entries(catMap).sort((a, b) => b[1] - a[1])[0];
+
+  let mt = `今月の合計支出: <strong>¥${spent.toLocaleString()}</strong><br>`;
+  if (lastMonthSpent > 0) {
+    const d = spent - lastMonthSpent;
+    mt += d >= 0
+      ? `先月より <strong>¥${d.toLocaleString()}</strong> 多いペースです。<br>`
+      : `先月より <strong>¥${Math.abs(d).toLocaleString()}</strong> 少ないペースです。<br>`;
+  }
+  if (topCat) {
+    mt += `最も多いカテゴリ: <strong>${topCat[0]}</strong>（¥${topCat[1].toLocaleString()}）`;
+  }
+  document.getElementById('monthly-text').innerHTML = mt;
+
+  // Monthly comments
+  const mc = [];
+  if (spent > expected * 1.1 && spent > 0) {
+    mc.push('このペースだと月末前に予算を使い切る可能性があります。');
+  }
+  if (remain >= 0 && remain < 5000) {
+    mc.push(`残予算が残りわずかです。あと¥${remain.toLocaleString()}です。`);
+  }
+  if (remain < 0) {
+    mc.push(`今月の予算を¥${Math.abs(remain).toLocaleString()}超過しています！`);
+  }
+  document.getElementById('monthly-comments').innerHTML =
+    mc.map(c => `<div class="comment">${c}</div>`).join('');
+
+  // Redraw open charts
+  if (document.getElementById('acc-weekly-body').classList.contains('open'))  drawWeekly(exps);
+  if (document.getElementById('acc-monthly-body').classList.contains('open')) drawMonthly(exps);
+}
+
+// ─── Charts ─────────────────────────────────────────────────
+function roundRect(ctx, x, y, w, h, r) {
+  r = Math.min(r, w/2, h/2);
+  ctx.beginPath();
+  ctx.moveTo(x+r, y);
+  ctx.lineTo(x+w-r, y);
+  ctx.quadraticCurveTo(x+w, y, x+w, y+r);
+  ctx.lineTo(x+w, y+h-r);
+  ctx.quadraticCurveTo(x+w, y+h, x+w-r, y+h);
+  ctx.lineTo(x+r, y+h);
+  ctx.quadraticCurveTo(x, y+h, x, y+h-r);
+  ctx.lineTo(x, y+r);
+  ctx.quadraticCurveTo(x, y, x+r, y);
+  ctx.closePath();
+}
+
+function setupCanvas(id) {
+  const c = document.getElementById(id);
+  const dpr = window.devicePixelRatio || 1;
+  const w = c.offsetWidth || c.parentElement.offsetWidth;
+  const H = 140;
+  c.width  = w * dpr;
+  c.height = H * dpr;
+  const ctx = c.getContext('2d');
+  ctx.scale(dpr, dpr);
+  return { ctx, w, H };
+}
+
+function drawWeekly(exps) {
+  const { ctx, w, H } = setupCanvas('chart-weekly');
+  const days  = ['月','火','水','木','金','土','日'];
+  const ws    = weekStart();
+  const today = todayStr();
+  const data  = days.map((lbl, i) => {
+    const d = addDays(ws, i);
+    return { lbl, d, amt: rangeSpent(exps, d, d) };
+  });
+
+  const conf_bgt = loadConf().dailyBudget;
+  const maxV = Math.max(...data.map(d => d.amt), conf_bgt);
+  const barW = (w - 32) / 7;
+  const bH = H - 28;
+
+  data.forEach(({ lbl, d, amt }, i) => {
+    const x = 16 + i * barW;
+    const h = amt > 0 ? Math.max((amt / maxV) * bH * 0.9, 4) : 0;
+    const y = bH - h;
+    const isToday = d === today;
+
+    ctx.fillStyle = isToday ? '#2e7d32' : '#a5d6a7';
+    if (h > 0) { roundRect(ctx, x+3, y, barW-6, h, 3); ctx.fill(); }
+
+    if (amt > 0) {
+      ctx.fillStyle = '#555';
+      ctx.font = `${Math.min(10, barW-4)}px sans-serif`;
+      ctx.textAlign = 'center';
+      const label = amt >= 10000 ? Math.round(amt/1000)+'k' : amt >= 1000 ? (Math.round(amt/100)/10)+'k' : String(amt);
+      ctx.fillText(label, x + barW/2, Math.max(y - 3, 10));
+    }
+
+    ctx.fillStyle = isToday ? '#2e7d32' : '#999';
+    ctx.font = `bold ${Math.min(11, barW-2)}px sans-serif`;
+    ctx.textAlign = 'center';
+    ctx.fillText(lbl, x + barW/2, H - 6);
+  });
+
+  // daily budget line
+  const lineY = bH - (conf_bgt / maxV) * bH * 0.9;
+  if (lineY > 0 && lineY < bH) {
+    ctx.strokeStyle = '#ef9a9a';
+    ctx.lineWidth = 1;
+    ctx.setLineDash([3, 3]);
+    ctx.beginPath(); ctx.moveTo(16, lineY); ctx.lineTo(w-16, lineY); ctx.stroke();
+    ctx.setLineDash([]);
+  }
+}
+
+function drawMonthly(exps) {
+  const { ctx, w, H } = setupCanvas('chart-monthly');
+  const n = new Date();
+  const months = [];
+  for (let i = 5; i >= 0; i--) {
+    const d = new Date(n.getFullYear(), n.getMonth()-i, 1);
+    const from = fmtDate(d);
+    const to   = fmtDate(new Date(d.getFullYear(), d.getMonth()+1, 0));
+    months.push({ lbl: (d.getMonth()+1)+'月', from, to, isCur: i===0 });
+  }
+  months.forEach(m => { m.amt = foodConveniRange(exps, m.from, m.to); });
+
+  const maxV = Math.max(...months.map(m => m.amt), 10000);
+  const barW = (w - 32) / months.length;
+  const bH = H - 28;
+
+  months.forEach(({ lbl, amt, isCur }, i) => {
+    const x = 16 + i * barW;
+    const h = amt > 0 ? Math.max((amt / maxV) * bH * 0.9, 4) : 0;
+    const y = bH - h;
+
+    ctx.fillStyle = isCur ? '#2e7d32' : '#a5d6a7';
+    if (h > 0) { roundRect(ctx, x+3, y, barW-6, h, 3); ctx.fill(); }
+
+    if (amt > 0) {
+      ctx.fillStyle = '#555';
+      ctx.font = '9px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('¥'+(Math.round(amt/1000))+'k', x+barW/2, Math.max(y-3, 10));
+    }
+
+    ctx.fillStyle = isCur ? '#2e7d32' : '#999';
+    ctx.font = 'bold 10px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(lbl, x+barW/2, H-6);
+  });
+}
+
+// ─── Expense List ────────────────────────────────────────────
+function renderList(exps) {
+  const el = document.getElementById('expense-list');
+  if (exps.length === 0) {
+    el.innerHTML = '<div class="empty-state"><div class="empty-icon">&#128240;</div><div class="empty-text">支出がまだありません</div></div>';
+    return;
+  }
+
+  const sorted = [...exps].sort((a, b) => (a.date+a.time) < (b.date+b.time) ? 1 : -1);
+  const groups = {};
+  sorted.forEach(e => {
+    const k = e.date.slice(0,7);
+    (groups[k] = groups[k] || []).push(e);
+  });
+
+  let html = '';
+  Object.keys(groups).sort((a,b)=>a<b?1:-1).forEach(ym => {
+    const [y, m] = ym.split('-');
+    html += `<div class="month-label">${y}年${+m}月</div>`;
+    groups[ym].forEach(e => {
+      const dDisp = e.date.slice(5).replace('-', '/');
+      const memo  = e.memo || '備考を追加...';
+      html += `
+        <div class="expense-item" id="ei-${e.id}">
+          <div class="ei-datetime">
+            <div class="ei-date"  onclick="editF('${e.id}','date')">${dDisp}</div>
+            <div class="ei-time"  onclick="editF('${e.id}','time')">${e.time}</div>
+          </div>
+          <div class="ei-center">
+            <div class="ei-cat c-${e.category}" onclick="editF('${e.id}','category')">${e.category}</div>
+            <div class="ei-memo" onclick="editF('${e.id}','memo')">${escHtml(memo)}</div>
+          </div>
+          <div class="ei-right">
+            <div class="ei-amount" onclick="editF('${e.id}','amount')">¥${e.amount.toLocaleString()}</div>
+          </div>
+          <button class="ei-del" onclick="askDelete('${e.id}')">&#128465;</button>
+        </div>`;
+    });
+  });
+  el.innerHTML = html;
+}
+
+function escHtml(s) {
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+// ─── Inline Edit ─────────────────────────────────────────────
+let _editId = null, _editField = null;
+
+function editF(id, field) {
+  _editId = id; _editField = field;
+  const exps = loadExp();
+  const e = exps.find(x => x.id === id);
+  if (!e) return;
+
+  const labels = { date:'日付', time:'時刻', amount:'金額', category:'カテゴリ', memo:'備考' };
+  document.getElementById('edit-title').textContent = labels[field] + 'を編集';
+
+  let inner = '';
+  if (field === 'amount') {
+    inner = `<input type="number" class="edit-input" id="edit-val" value="${e.amount}" inputmode="numeric" min="0">`;
+  } else if (field === 'date') {
+    inner = `<input type="date" class="edit-input" id="edit-val" value="${e.date}">`;
+  } else if (field === 'time') {
+    inner = `<input type="time" class="edit-input" id="edit-val" value="${e.time}">`;
+  } else if (field === 'category') {
+    const opts = ['コンビニ','食費','書籍','娯楽費','交通費','その他']
+      .map(c => `<option value="${c}"${c===e.category?' selected':''}>${c}</option>`).join('');
+    inner = `<select class="edit-select" id="edit-val">${opts}</select>`;
+  } else if (field === 'memo') {
+    inner = `<input type="text" class="edit-input" id="edit-val" value="${escHtml(e.memo||'')}" placeholder="備考を入力">`;
+  }
+
+  document.getElementById('edit-body').innerHTML = inner;
+  document.getElementById('edit-overlay').classList.remove('hidden');
+  setTimeout(() => { const v = document.getElementById('edit-val'); if(v) v.focus(); }, 80);
+}
+
+document.getElementById('edit-save').onclick = function() {
+  const exps = loadExp();
+  const idx  = exps.findIndex(e => e.id === _editId);
+  if (idx < 0) return;
+  const val = document.getElementById('edit-val').value;
+  if (_editField === 'amount') exps[idx].amount = parseInt(val) || 0;
+  else exps[idx][_editField] = val;
+  saveExp(exps);
+  document.getElementById('edit-overlay').classList.add('hidden');
+  renderList(exps);
+  refreshAll();
+  toast('更新しました');
+};
+document.getElementById('edit-cancel').onclick = () =>
+  document.getElementById('edit-overlay').classList.add('hidden');
+
+// ─── Delete ──────────────────────────────────────────────────
+let _delId = null;
+
+function askDelete(id) {
+  _delId = id;
+  document.getElementById('confirm-dialog').classList.remove('hidden');
+}
+document.getElementById('confirm-yes').onclick = function() {
+  if (!_delId) return;
+  const exps = loadExp().filter(e => e.id !== _delId);
+  saveExp(exps);
+  document.getElementById('confirm-dialog').classList.add('hidden');
+  renderList(exps);
+  refreshAll();
+  toast('削除しました');
+  _delId = null;
+};
+document.getElementById('confirm-no').onclick = () => {
+  document.getElementById('confirm-dialog').classList.add('hidden');
+  _delId = null;
+};
+
+// ─── Input Modal ─────────────────────────────────────────────
+let _selCat = null;
+
+function openModal() {
+  _selCat = null;
+  document.getElementById('amount-input').value = '';
+  document.querySelectorAll('.cat-btn').forEach(b => b.classList.remove('selected'));
+  document.getElementById('modal-overlay').classList.remove('hidden');
+  setTimeout(() => document.getElementById('amount-input').focus(), 80);
+}
+
+document.querySelectorAll('.cat-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.cat-btn').forEach(b => b.classList.remove('selected'));
+    btn.classList.add('selected');
+    _selCat = btn.dataset.cat;
+  });
+});
+
+document.getElementById('modal-submit').onclick = function() {
+  const amount = parseInt(document.getElementById('amount-input').value);
+  if (!amount || amount <= 0) { toast('金額を入力してください'); return; }
+  if (!_selCat)               { toast('カテゴリを選択してください'); return; }
+
+  const now = new Date();
+  const exps = loadExp();
+  exps.push({ id: uid(), date: fmtDate(now), time: fmtTime(now), amount, category: _selCat, memo: '' });
+  saveExp(exps);
+
+  // Reset for next entry
+  document.getElementById('amount-input').value = '';
+  document.querySelectorAll('.cat-btn').forEach(b => b.classList.remove('selected'));
+  _selCat = null;
+  document.getElementById('amount-input').focus();
+
+  refreshAll();
+  toast('¥' + amount.toLocaleString() + ' 記録しました');
+};
+
+document.getElementById('modal-close').onclick = function() {
+  document.getElementById('modal-overlay').classList.add('hidden');
+  refreshAll();
+};
+
+// ─── Settings ────────────────────────────────────────────────
+document.getElementById('open-settings').onclick = function() {
+  const c = loadConf();
+  document.getElementById('set-monthly').value = c.monthlyBudget;
+  document.getElementById('set-daily').value   = c.dailyBudget;
+  document.getElementById('settings-modal').classList.remove('hidden');
+};
+document.getElementById('settings-save').onclick = function() {
+  const m = parseInt(document.getElementById('set-monthly').value);
+  const d = parseInt(document.getElementById('set-daily').value);
+  if (!m || !d) { toast('正しい値を入力してください'); return; }
+  saveConf({ monthlyBudget: m, dailyBudget: d });
+  document.getElementById('settings-modal').classList.add('hidden');
+  refreshAll();
+  toast('設定を保存しました');
+};
+document.getElementById('settings-close').onclick = () =>
+  document.getElementById('settings-modal').classList.add('hidden');
+
+// ─── Tabs ────────────────────────────────────────────────────
+function switchTab(tab) {
+  ['analysis','list'].forEach(t => {
+    document.getElementById('tab-'+t).classList.toggle('active', t===tab);
+    document.getElementById('tab-btn-'+t).classList.toggle('active', t===tab);
+  });
+  if (tab === 'list') renderList(loadExp());
+}
+
+// ─── Accordion ───────────────────────────────────────────────
+['weekly','monthly'].forEach(key => {
+  document.getElementById('acc-'+key+'-hdr').addEventListener('click', () => {
+    const body  = document.getElementById('acc-'+key+'-body');
+    const arrow = document.getElementById('arr-'+key);
+    const open  = body.classList.toggle('open');
+    arrow.classList.toggle('open', open);
+    if (open) {
+      const exps = loadExp();
+      if (key === 'weekly')  drawWeekly(exps);
+      if (key === 'monthly') drawMonthly(exps);
+    }
+  });
+});
+
+// ─── Toast ───────────────────────────────────────────────────
+let _toastTimer = null;
+function toast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  if (_toastTimer) clearTimeout(_toastTimer);
+  _toastTimer = setTimeout(() => el.classList.remove('show'), 2200);
+}
+
+// ─── Init ────────────────────────────────────────────────────
+window.addEventListener('load', () => {
+  refreshAll();
+  openModal();
+});
+
+window.addEventListener('resize', () => {
+  if (document.getElementById('acc-weekly-body').classList.contains('open'))  drawWeekly(loadExp());
+  if (document.getElementById('acc-monthly-body').classList.contains('open')) drawMonthly(loadExp());
+});
+</script>
+</body>
+</html>
